@@ -33,6 +33,20 @@ describe NetHttp2::Client do
     end
   end
 
+  describe '#join' do
+    let(:client) { NetHttp2::Client.new("http://localhost") }
+
+    it 'returns nil normally' do
+      expect(client.join).to be_nil
+    end
+
+    it 'raises if a timeout occurs' do
+      client.instance_variable_set(:@streams, [1])
+      expect {client.join(timeout: 1)}.to raise_error NetHttp2::TimeoutError
+      client.close
+    end
+  end
+
   describe "#ssl?" do
     let(:client) { NetHttp2::Client.new(url) }
 
