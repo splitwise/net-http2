@@ -17,6 +17,7 @@ module NetHttp2
     def initialize(url, options={})
       @uri             = URI.parse(url)
       @connect_timeout = options[:connect_timeout] || 60
+      @idle_timeout    = options[:idle_timeout] || nil
       @ssl_context     = add_npn_to_context(options[:ssl_context] || OpenSSL::SSL::SSLContext.new)
 
       PROXY_SETTINGS_KEYS.each do |key|
@@ -141,11 +142,13 @@ module NetHttp2
           data_received = @socket.read_nonblock(1024)
           h2 << data_received
         rescue IO::WaitReadable
-          IO.select([@socket])
-          retry
+          ready = IO.select([@socket], nil, nil, @idle_timeout)
+          retry if ready
+          raise NetHttp2::TimeoutError, "Connection was idle"
         rescue IO::WaitWritable
-          IO.select(nil, [@socket])
-          retry
+          ready = IO.select(nil, [@socket], nil, @idle_timeout)
+          retry if ready
+          raise NetHttp2::TimeoutError, "Connection was idle"
         end
       end
     end
