@@ -54,8 +54,13 @@ module NetHttp2
       init_vars
     end
 
-    def join
+    def join(timeout: nil)
+      starting_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
       while !@streams.empty? do
+        if timeout && Process.clock_gettime(Process::CLOCK_MONOTONIC) - starting_time > timeout
+          raise NetHttp2::TimeoutError, "Streams not closed"
+        end
         sleep 0.05
       end
     end
